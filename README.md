@@ -8,6 +8,7 @@ A collection of battle-tested `CLAUDE.md` rule sets for different project types.
 - [Available Rule Sets](#available-rule-sets)
 - [Shared (Universal)](#shared-universal)
 - [Frontend Shared Rules](#frontend-shared-rules)
+- [Backend Shared Rules (Node.js)](#backend-shared-rules-nodejs)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [How It Works](#how-it-works)
@@ -90,6 +91,28 @@ The `frontend/shared/` directory contains **reusable frontend building blocks** 
 | [`frontend/shared/performance-rules.md`](frontend/shared/performance-rules.md) | Rendering, lazy loading, image optimization, bundle size, memory |
 | [`frontend/shared/security-rules.md`](frontend/shared/security-rules.md) | Secrets, input validation, auth, XSS prevention, dependency security |
 | [`frontend/shared/testing-rules.md`](frontend/shared/testing-rules.md) | Test types (unit/integration), naming conventions, 80% coverage minimum |
+
+---
+
+## Backend Shared Rules (Node.js)
+
+The `backend/node-js/shared/` directory contains **reusable backend building blocks** — rules for API design, database, security, error handling, and other backend-specific conventions.
+
+> **Important:** Claude Code only reads `CLAUDE.md` files, not the `shared/` directory directly. Embed these rules into your backend `CLAUDE.md`.
+
+| File | Description |
+|------|-------------|
+| [`backend/node-js/shared/api-design-rules.md`](backend/node-js/shared/api-design-rules.md) | REST conventions, HTTP methods/status codes, pagination, versioning |
+| [`backend/node-js/shared/database-rules.md`](backend/node-js/shared/database-rules.md) | ORM usage, migrations, query optimization, transactions, soft deletes |
+| [`backend/node-js/shared/error-handling-rules.md`](backend/node-js/shared/error-handling-rules.md) | Custom error classes, global error handler, async error handling |
+| [`backend/node-js/shared/security-rules.md`](backend/node-js/shared/security-rules.md) | Auth, rate limiting, helmet, CORS, SQL injection, password hashing |
+| [`backend/node-js/shared/testing-rules.md`](backend/node-js/shared/testing-rules.md) | Unit/integration/e2e tests, test DB, mocking, supertest, coverage |
+| [`backend/node-js/shared/logging-rules.md`](backend/node-js/shared/logging-rules.md) | Structured logging, log levels, correlation ID, sensitive data masking |
+| [`backend/node-js/shared/performance-rules.md`](backend/node-js/shared/performance-rules.md) | Caching, async ops, connection pooling, background jobs, streams |
+| [`backend/node-js/shared/documentation-rules.md`](backend/node-js/shared/documentation-rules.md) | Swagger/OpenAPI, JSDoc, DTO docs, env variable documentation |
+| [`backend/node-js/shared/naming-rules.md`](backend/node-js/shared/naming-rules.md) | File/class/method naming, NestJS conventions, DTO naming |
+| [`backend/node-js/shared/code-review-rules.md`](backend/node-js/shared/code-review-rules.md) | Review checklist (API, security, DB, testing), comment types |
+| [`backend/node-js/shared/configuration-rules.md`](backend/node-js/shared/configuration-rules.md) | Env validation, config module, secrets management, feature flags |
 
 ---
 
@@ -229,6 +252,7 @@ claude-code-rules/
 │           └── CLAUDE.md            ← Vue 3 + TypeScript rules (✅ Ready)
 ├── backend/
 │   ├── node-js/
+│   │   ├── shared/                  ← Backend-specific shared rules (11 files)
 │   │   └── rules/
 │   │       └── nest-js/
 │   │           └── CLAUDE.md        ← NestJS rules (🚧 Coming soon)
