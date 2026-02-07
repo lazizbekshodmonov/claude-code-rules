@@ -47,7 +47,8 @@ This repository provides **ready-to-use rule sets** for different tech stacks so
 
 | Rule Set | Tech Stack | File | Status |
 |----------|-----------|------|--------|
-| NestJS | NestJS, TypeScript | [`backend/node-js/rules/nest-js/CLAUDE.md`](backend/node-js/rules/nest-js/CLAUDE.md) | 🚧 Coming soon |
+| NestJS | NestJS, TypeScript, TypeORM | [`backend/node-js/rules/nest-js/CLAUDE.md`](backend/node-js/rules/nest-js/CLAUDE.md) | 🚧 Coming soon |
+| Express | Express, TypeScript, TypeORM | [`backend/node-js/rules/express-js/CLAUDE.md`](backend/node-js/rules/express-js/CLAUDE.md) | 🚧 Coming soon |
 | Java + Spring Boot | Java, Spring Boot | [`backend/java/rules/CLAUDE.md`](backend/java/rules/CLAUDE.md) | 🚧 Coming soon |
 | Python + FastAPI | Python, FastAPI | [`backend/python/rules/CLAUDE.md`](backend/python/rules/CLAUDE.md) | 🚧 Coming soon |
 
@@ -96,23 +97,44 @@ The `frontend/shared/` directory contains **reusable frontend building blocks** 
 
 ## Backend Shared Rules (Node.js)
 
-The `backend/node-js/shared/` directory contains **reusable backend building blocks** — rules for API design, database, security, error handling, and other backend-specific conventions.
+### Universal (NestJS + Express)
 
-> **Important:** Claude Code only reads `CLAUDE.md` files, not the `shared/` directory directly. Embed these rules into your backend `CLAUDE.md`.
+The `backend/node-js/shared/` directory contains rules that apply to **both** NestJS and Express:
 
 | File | Description |
 |------|-------------|
 | [`backend/node-js/shared/api-design-rules.md`](backend/node-js/shared/api-design-rules.md) | REST conventions, HTTP methods/status codes, pagination, versioning |
-| [`backend/node-js/shared/database-rules.md`](backend/node-js/shared/database-rules.md) | ORM usage, migrations, query optimization, transactions, soft deletes |
-| [`backend/node-js/shared/error-handling-rules.md`](backend/node-js/shared/error-handling-rules.md) | Custom error classes, global error handler, async error handling |
-| [`backend/node-js/shared/security-rules.md`](backend/node-js/shared/security-rules.md) | Auth, rate limiting, helmet, CORS, SQL injection, password hashing |
-| [`backend/node-js/shared/testing-rules.md`](backend/node-js/shared/testing-rules.md) | Unit/integration/e2e tests, test DB, mocking, supertest, coverage |
-| [`backend/node-js/shared/logging-rules.md`](backend/node-js/shared/logging-rules.md) | Structured logging, log levels, correlation ID, sensitive data masking |
-| [`backend/node-js/shared/performance-rules.md`](backend/node-js/shared/performance-rules.md) | Caching, async ops, connection pooling, background jobs, streams |
-| [`backend/node-js/shared/documentation-rules.md`](backend/node-js/shared/documentation-rules.md) | Swagger/OpenAPI, JSDoc, DTO docs, env variable documentation |
-| [`backend/node-js/shared/naming-rules.md`](backend/node-js/shared/naming-rules.md) | File/class/method naming, NestJS conventions, DTO naming |
+| [`backend/node-js/shared/naming-rules.md`](backend/node-js/shared/naming-rules.md) | File/class/method naming, DTO naming, casing conventions |
 | [`backend/node-js/shared/code-review-rules.md`](backend/node-js/shared/code-review-rules.md) | Review checklist (API, security, DB, testing), comment types |
+| [`backend/node-js/shared/documentation-rules.md`](backend/node-js/shared/documentation-rules.md) | Swagger/OpenAPI, JSDoc, DTO docs, env variable documentation |
+| [`backend/node-js/shared/logging-rules.md`](backend/node-js/shared/logging-rules.md) | Structured logging, log levels, correlation ID, sensitive data masking |
 | [`backend/node-js/shared/configuration-rules.md`](backend/node-js/shared/configuration-rules.md) | Env validation, config module, secrets management, feature flags |
+
+### NestJS-Specific
+
+The `backend/node-js/rules/nest-js/shared/` directory contains rules specific to **NestJS** (guards, pipes, interceptors, modules):
+
+| File | Description |
+|------|-------------|
+| [`backend/node-js/rules/nest-js/shared/database-rules.md`](backend/node-js/rules/nest-js/shared/database-rules.md) | TypeORM + NestJS: entities, repository injection, QueryBuilder, migrations |
+| [`backend/node-js/rules/nest-js/shared/error-handling-rules.md`](backend/node-js/rules/nest-js/shared/error-handling-rules.md) | Exception filters, ValidationPipe, built-in HTTP exceptions |
+| [`backend/node-js/rules/nest-js/shared/security-rules.md`](backend/node-js/rules/nest-js/shared/security-rules.md) | JWT guards, RolesGuard, @Throttle, Passport integration |
+| [`backend/node-js/rules/nest-js/shared/testing-rules.md`](backend/node-js/rules/nest-js/shared/testing-rules.md) | Test.createTestingModule, repository mocking, e2e with supertest |
+| [`backend/node-js/rules/nest-js/shared/performance-rules.md`](backend/node-js/rules/nest-js/shared/performance-rules.md) | Interceptors, @nestjs/bull queues, streaming, query logging |
+| [`backend/node-js/rules/nest-js/shared/caching-rules.md`](backend/node-js/rules/nest-js/shared/caching-rules.md) | @nestjs/cache-manager, CacheInterceptor, Redis, cache invalidation |
+
+### Express-Specific
+
+The `backend/node-js/rules/express-js/shared/` directory contains rules specific to **Express** (middleware, manual DI):
+
+| File | Description |
+|------|-------------|
+| [`backend/node-js/rules/express-js/shared/database-rules.md`](backend/node-js/rules/express-js/shared/database-rules.md) | TypeORM + Express: DataSource setup, service layer, QueryBuilder |
+| [`backend/node-js/rules/express-js/shared/error-handling-rules.md`](backend/node-js/rules/express-js/shared/error-handling-rules.md) | Error middleware, asyncHandler wrapper, Zod validation, custom errors |
+| [`backend/node-js/rules/express-js/shared/security-rules.md`](backend/node-js/rules/express-js/shared/security-rules.md) | JWT middleware, authorize middleware, express-rate-limit, helmet |
+| [`backend/node-js/rules/express-js/shared/testing-rules.md`](backend/node-js/rules/express-js/shared/testing-rules.md) | Supertest, mock repositories, test app factory, middleware testing |
+| [`backend/node-js/rules/express-js/shared/performance-rules.md`](backend/node-js/rules/express-js/shared/performance-rules.md) | Compression, response timing middleware, Bull queues, streaming |
+| [`backend/node-js/rules/express-js/shared/caching-rules.md`](backend/node-js/rules/express-js/shared/caching-rules.md) | Redis client, cache middleware, manual caching, cache invalidation |
 
 ---
 
@@ -252,10 +274,14 @@ claude-code-rules/
 │           └── CLAUDE.md            ← Vue 3 + TypeScript rules (✅ Ready)
 ├── backend/
 │   ├── node-js/
-│   │   ├── shared/                  ← Backend-specific shared rules (11 files)
+│   │   ├── shared/                  ← Universal Node.js rules (6 files)
 │   │   └── rules/
-│   │       └── nest-js/
-│   │           └── CLAUDE.md        ← NestJS rules (🚧 Coming soon)
+│   │       ├── nest-js/
+│   │       │   ├── shared/          ← NestJS-specific rules (6 files)
+│   │       │   └── CLAUDE.md        ← NestJS rules (🚧 Coming soon)
+│   │       └── express-js/
+│   │           ├── shared/          ← Express-specific rules (6 files)
+│   │           └── CLAUDE.md        ← Express rules (🚧 Coming soon)
 │   ├── java/
 │   │   └── rules/
 │   │       └── CLAUDE.md            ← Java + Spring Boot rules (🚧 Coming soon)
