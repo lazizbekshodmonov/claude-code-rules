@@ -69,6 +69,7 @@ The `shared/` directory contains rules that apply to **all stacks** — frontend
 | File | Description |
 |------|-------------|
 | [`shared/agent-rules.md`](shared/agent-rules.md) | Multi-agent execution, context limits, scoping strategies |
+| [`shared/git-rules.md`](shared/git-rules.md) | Branch naming, commit messages (conventional commits), PR practices |
 | [`shared/planning-rules.md`](shared/planning-rules.md) | Mandatory planning mode, plan file template, complexity levels |
 
 ---
@@ -85,7 +86,6 @@ The `frontend/shared/` directory contains **reusable frontend building blocks** 
 | [`frontend/shared/api-rules.md`](frontend/shared/api-rules.md) | API service layer, HTTP client, error handling, request/response typing |
 | [`frontend/shared/code-review-rules.md`](frontend/shared/code-review-rules.md) | Reviewer/author responsibilities, comment types, review checklist |
 | [`frontend/shared/documentation-rules.md`](frontend/shared/documentation-rules.md) | JSDoc, block comments, inline comments, file-level docs |
-| [`frontend/shared/git-rules.md`](frontend/shared/git-rules.md) | Branch naming, commit messages (conventional commits), PR practices |
 | [`frontend/shared/naming-rules.md`](frontend/shared/naming-rules.md) | Casing conventions, boolean/function/component/event naming |
 | [`frontend/shared/performance-rules.md`](frontend/shared/performance-rules.md) | Rendering, lazy loading, image optimization, bundle size, memory |
 | [`frontend/shared/security-rules.md`](frontend/shared/security-rules.md) | Secrets, input validation, auth, XSS prevention, dependency security |
@@ -212,6 +212,7 @@ claude-code-rules/
 ├── README.md
 ├── shared/                          ← Universal rules (all stacks)
 │   ├── agent-rules.md
+│   ├── git-rules.md
 │   └── planning-rules.md
 ├── frontend/
 │   ├── shared/                      ← Frontend-specific shared rules
@@ -219,7 +220,6 @@ claude-code-rules/
 │   │   ├── api-rules.md
 │   │   ├── code-review-rules.md
 │   │   ├── documentation-rules.md
-│   │   ├── git-rules.md
 │   │   ├── naming-rules.md
 │   │   ├── performance-rules.md
 │   │   ├── security-rules.md
