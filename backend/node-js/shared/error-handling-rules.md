@@ -167,7 +167,7 @@ router.get("/users/:id", asyncHandler(async (req, res) => {
 ```ts
 // ❌ Incorrect — error logic in controller
 async getUser(req, res) {
-  const user = await prisma.user.findUnique({ where: { id: req.params.id } });
+  const user = await userRepository.findOneBy({ id: req.params.id });
   if (!user) return res.status(404).json({ message: "Not found" });
   res.json(user);
 }
@@ -175,7 +175,7 @@ async getUser(req, res) {
 // ✅ Correct — service throws, controller delegates
 // service
 async findById(id: string): Promise<User> {
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await this.userRepository.findOneBy({ id });
   if (!user) throw new NotFoundError("User", id);
   return user;
 }

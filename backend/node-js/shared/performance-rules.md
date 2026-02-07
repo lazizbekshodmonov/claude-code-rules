@@ -35,13 +35,13 @@ const [user, orders, notifications] = await Promise.all([
 - Cache frequently read, rarely changed data to reduce database load:
 
 ```ts
-// ✅ Correct — Redis cache with TTL
+// ✅ Correct — Redis cache with TTL (TypeORM)
 async findById(id: string): Promise<User> {
   const cacheKey = `user:${id}`;
   const cached = await redis.get(cacheKey);
   if (cached) return JSON.parse(cached);
 
-  const user = await prisma.user.findUnique({ where: { id } });
+  const user = await this.userRepository.findOneBy({ id });
   if (user) await redis.set(cacheKey, JSON.stringify(user), "EX", 300);
   return user;
 }
@@ -51,9 +51,9 @@ async findById(id: string): Promise<User> {
 
 ```ts
 async update(id: string, data: UpdateUserDto): Promise<User> {
-  const user = await prisma.user.update({ where: { id }, data });
+  await this.userRepository.update(id, data);
   await redis.del(`user:${id}`);
-  return user;
+  return this.userRepository.findOneBy({ id });
 }
 ```
 
@@ -151,8 +151,9 @@ stream.pipe(csvParser()).on("data", (row) => processRow(row));
 // HTTP client timeout
 const response = await axios.get(url, { timeout: 5000 });
 
-// Database query timeout
-await prisma.$queryRaw`SELECT * FROM users`; // configure in connection string
+// Database query timeout — configure in DataSource/connection string
+// TypeORM: extra.statement_timeout in DataSource options
+// Prisma: connection_limit & pool_timeout in DATABASE_URL
 ```
 
 ## Rules

@@ -60,7 +60,16 @@ const createUserSchema = z.object({
 // ❌ Incorrect — SQL injection risk
 const query = `SELECT * FROM users WHERE email = '${email}'`;
 
-// ✅ Correct
+// ✅ Correct — TypeORM
+const user = await userRepository.findOneBy({ email });
+
+// ✅ Correct — TypeORM QueryBuilder (parameterized)
+const user = await userRepository
+  .createQueryBuilder("user")
+  .where("user.email = :email", { email })
+  .getOne();
+
+// ✅ Correct — Prisma
 const user = await prisma.user.findUnique({ where: { email } });
 ```
 
@@ -104,10 +113,10 @@ async getDashboard() {
 - Always verify resource ownership — a user should not access another user's data:
 
 ```ts
-// ✅ Correct — verify ownership
+// ✅ Correct — verify ownership (TypeORM)
 async getOrder(userId: string, orderId: string) {
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (order.userId !== userId) throw new ForbiddenError();
+  const order = await this.orderRepository.findOneBy({ id: orderId });
+  if (!order || order.userId !== userId) throw new ForbiddenError();
   return order;
 }
 ```

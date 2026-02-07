@@ -85,6 +85,12 @@ DATABASE_URL="postgresql://user:pass@localhost:5432/myapp_test"
 - Reset the database before each test suite:
 
 ```ts
+// TypeORM
+beforeAll(async () => {
+  await dataSource.query("TRUNCATE TABLE users, orders CASCADE");
+});
+
+// Prisma
 beforeAll(async () => {
   await prisma.$executeRaw`TRUNCATE TABLE users, orders CASCADE`;
 });
@@ -110,7 +116,10 @@ jest.spyOn(emailService, "send").mockResolvedValue(undefined);
 // ❌ Incorrect — mocking the service we're testing
 jest.spyOn(userService, "findById").mockResolvedValue(mockUser);
 
-// ✅ Correct — mock the repository/ORM the service depends on
+// ✅ Correct — mock the repository the service depends on (TypeORM)
+jest.spyOn(userRepository, "findOneBy").mockResolvedValue(mockUser);
+
+// ✅ Correct — mock the ORM the service depends on (Prisma)
 jest.spyOn(prisma.user, "findUnique").mockResolvedValue(mockUser);
 ```
 
