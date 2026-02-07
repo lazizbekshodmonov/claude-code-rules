@@ -1,128 +1,162 @@
 # Testing Rules (NestJS)
 
-> NestJS-specific testing rules using `@nestjs/testing`, Jest, and supertest.
+> NestJS-specific testing rules using `@nestjs/testing`, Jest, and supertest — aligned with custom repository, mapper, and AppException patterns.
 
 ## Test Module Setup
 
 - Use `Test.createTestingModule` to create isolated test modules:
 
 ```ts
-describe("UsersService", () => {
-  let service: UsersService;
-  let repository: Repository<User>;
+describe("UserService", () => {
+  let service: UserService;
+  let repository: UserRepository;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       providers: [
-        UsersService,
+        UserService,
         {
-          provide: getRepositoryToken(User),
+          provide: UserRepository,
           useValue: {
             findOneBy: jest.fn(),
+            findOne: jest.fn(),
             find: jest.fn(),
             save: jest.fn(),
             softDelete: jest.fn(),
-            createQueryBuilder: jest.fn(),
+            findByUsername: jest.fn(),
+            findOfPagination: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    service = module.get(UsersService);
-    repository = module.get(getRepositoryToken(User));
+    service = module.get(UserService);
+    repository = module.get(UserRepository);
   });
 });
 ```
 
+- Mock the **custom repository class** directly (not via `getRepositoryToken()` since we use custom repositories).
+
 ## Unit Testing Services
 
-- Mock repository methods — test business logic in isolation:
+- Mock repository methods — test business logic and AppException throwing:
 
 ```ts
-describe("findById", () => {
-  it("should return user when found", async () => {
-    const mockUser = { id: "uuid-1", name: "John", email: "john@test.com" };
-    jest.spyOn(repository, "findOneBy").mockResolvedValue(mockUser as User);
+describe("findOne", () => {
+  it("should return user DTO when found", async () => {
+    const mockEntity = { id: 1, name: "John", email: "john@test.com", role: UserRole.USER, status: UserStatus.ACTIVE };
+    jest.spyOn(repository, "findOneBy").mockResolvedValue(mockEntity as UserEntity);
 
-    const result = await service.findById("uuid-1");
+    const result = await service.findOne(1);
 
-    expect(result).toEqual(mockUser);
-    expect(repository.findOneBy).toHaveBeenCalledWith({ id: "uuid-1" });
+    expect(result).toEqual(expect.objectContaining({
+      id: 1,
+      name: "John",
+      email: "john@test.com",
+    }));
+    expect(repository.findOneBy).toHaveBeenCalledWith({ id: 1 });
   });
 
-  it("should throw NotFoundException when user not found", async () => {
+  it("should throw AppException with USER_NOT_FOUND when user does not exist", async () => {
     jest.spyOn(repository, "findOneBy").mockResolvedValue(null);
 
-    await expect(service.findById("uuid-1")).rejects.toThrow(NotFoundException);
+    try {
+      await service.findOne(1);
+      fail("Expected AppException");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppException);
+      expect(error.code).toBe(UserError.NOT_FOUND);
+      expect(error.getStatus()).toBe(HttpStatus.NOT_FOUND);
+    }
   });
 });
 
-describe("create", () => {
-  it("should create and return a new user", async () => {
-    const dto: CreateUserDto = { name: "John", email: "john@test.com" };
-    const savedUser = { id: "uuid-1", ...dto };
-    jest.spyOn(repository, "findOneBy").mockResolvedValue(null);
-    jest.spyOn(repository, "save").mockResolvedValue(savedUser as User);
+describe("createUser", () => {
+  it("should create and return user DTO", async () => {
+    const dto: UserCreateDto = { name: "John", email: "john@test.com", password: "Test1234" };
+    const savedEntity = { id: 1, name: "John", email: "john@test.com", role: UserRole.USER, status: UserStatus.ACTIVE };
+    jest.spyOn(repository, "findByUsername").mockResolvedValue(null);
+    jest.spyOn(repository, "save").mockResolvedValue(savedEntity as UserEntity);
 
-    const result = await service.create(dto);
+    const result = await service.createUser(dto);
 
-    expect(result).toEqual(savedUser);
-    expect(repository.save).toHaveBeenCalledWith(dto);
+    expect(result.email).toBe("john@test.com");
   });
 
-  it("should throw ConflictException when email exists", async () => {
-    const dto: CreateUserDto = { name: "John", email: "john@test.com" };
-    jest.spyOn(repository, "findOneBy").mockResolvedValue({ id: "existing" } as User);
+  it("should throw AppException with USER_ALREADY_EXISTS when email exists", async () => {
+    jest.spyOn(repository, "findByUsername").mockResolvedValue({ id: 1 } as UserEntity);
 
-    await expect(service.create(dto)).rejects.toThrow(ConflictException);
+    try {
+      await service.createUser({ name: "John", email: "john@test.com", password: "Test1234" });
+      fail("Expected AppException");
+    } catch (error) {
+      expect(error).toBeInstanceOf(AppException);
+      expect(error.code).toBe(UserError.ALREADY_EXISTS);
+    }
   });
 });
+```
+
+## Testing AppException
+
+- Always verify both `code` and `status`:
+
+```ts
+try {
+  await service.someMethod();
+  fail("Expected AppException");
+} catch (error) {
+  expect(error).toBeInstanceOf(AppException);
+  expect(error.code).toBe(ModuleError.ERROR_CODE);
+  expect(error.getStatus()).toBe(HttpStatus.EXPECTED_STATUS);
+}
 ```
 
 ## Unit Testing Controllers
 
 ```ts
-describe("UsersController", () => {
-  let controller: UsersController;
-  let service: UsersService;
+describe("UserController", () => {
+  let controller: UserController;
+  let service: UserService;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
-      controllers: [UsersController],
+      controllers: [UserController],
       providers: [
         {
-          provide: UsersService,
+          provide: UserService,
           useValue: {
-            findById: jest.fn(),
-            create: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
+            findOne: jest.fn(),
+            findAllUsers: jest.fn(),
+            createUser: jest.fn(),
+            updateUser: jest.fn(),
+            deleteUser: jest.fn(),
+            getProfile: jest.fn(),
           },
         },
       ],
     }).compile();
 
-    controller = module.get(UsersController);
-    service = module.get(UsersService);
+    controller = module.get(UserController);
+    service = module.get(UserService);
   });
 
   it("should return user for valid ID", async () => {
-    const mockUser = { id: "uuid-1", name: "John" };
-    jest.spyOn(service, "findById").mockResolvedValue(mockUser as User);
+    const mockDto = { id: 1, name: "John", email: "john@test.com" };
+    jest.spyOn(service, "findOne").mockResolvedValue(mockDto as UserResponseDto);
 
-    const result = await controller.findById("uuid-1");
+    const result = await controller.findOne(1);
 
-    expect(result).toEqual(mockUser);
+    expect(result).toEqual(mockDto);
   });
 });
 ```
 
 ## E2E Testing
 
-- Use `@nestjs/testing` with supertest for full request/response cycle:
-
 ```ts
-describe("UsersController (e2e)", () => {
+describe("UserController (e2e)", () => {
   let app: INestApplication;
   let dataSource: DataSource;
 
@@ -132,7 +166,8 @@ describe("UsersController (e2e)", () => {
     }).compile();
 
     app = module.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
+    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
 
     dataSource = module.get(DataSource);
@@ -146,59 +181,64 @@ describe("UsersController (e2e)", () => {
     await dataSource.query("TRUNCATE TABLE users CASCADE");
   });
 
-  describe("GET /users/:id", () => {
+  describe("GET /user/:id", () => {
     it("should return 200 and user data", async () => {
       const user = await createTestUser(dataSource);
-      const token = generateTestToken(user);
+      const cookie = await loginAndGetCookies(app, user);
 
       const res = await request(app.getHttpServer())
-        .get(`/users/${user.id}`)
-        .set("Authorization", `Bearer ${token}`)
+        .get(`/user/${user.id}`)
+        .set("Cookie", cookie)
+        .set("X-Company-Key", testCompanyKey)
         .expect(200);
 
-      expect(res.body).toMatchObject({
-        id: user.id,
-        name: user.name,
-      });
+      expect(res.body).toMatchObject({ id: user.id, name: user.name });
     });
 
-    it("should return 404 for non-existent user", async () => {
-      const token = generateTestToken({ id: "uuid-1", role: "admin" });
+    it("should return 404 with USER_NOT_FOUND code", async () => {
+      const cookie = await loginAsAdmin(app);
 
-      await request(app.getHttpServer())
-        .get("/users/non-existent-uuid")
-        .set("Authorization", `Bearer ${token}`)
+      const res = await request(app.getHttpServer())
+        .get("/user/99999")
+        .set("Cookie", cookie)
         .expect(404);
+
+      expect(res.body.code).toBe("USER_NOT_FOUND");
+      expect(res.body.message).toBeDefined();
+      expect(res.body.locale).toBeDefined();
     });
 
-    it("should return 401 without auth token", async () => {
+    it("should return 401 without auth cookie", async () => {
       await request(app.getHttpServer())
-        .get("/users/uuid-1")
+        .get("/user/1")
         .expect(401);
     });
   });
 
-  describe("POST /users", () => {
+  describe("POST /user", () => {
     it("should return 201 for valid input", async () => {
-      const token = generateTestToken({ id: "uuid-1", role: "admin" });
+      const cookie = await loginAsAdmin(app);
 
       const res = await request(app.getHttpServer())
-        .post("/users")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Jane", email: "jane@test.com" })
+        .post("/user")
+        .set("Cookie", cookie)
+        .send({ name: "Jane", email: "jane@test.com", password: "Test1234!" })
         .expect(201);
 
       expect(res.body.email).toBe("jane@test.com");
     });
 
-    it("should return 422 for invalid email", async () => {
-      const token = generateTestToken({ id: "uuid-1", role: "admin" });
+    it("should return 400 with VALIDATION_FAILED for invalid email", async () => {
+      const cookie = await loginAsAdmin(app);
 
-      await request(app.getHttpServer())
-        .post("/users")
-        .set("Authorization", `Bearer ${token}`)
-        .send({ name: "Jane", email: "not-an-email" })
-        .expect(422);
+      const res = await request(app.getHttpServer())
+        .post("/user")
+        .set("Cookie", cookie)
+        .send({ name: "Jane", email: "not-an-email", password: "Test1234!" })
+        .expect(400);
+
+      expect(res.body.code).toBe("VALIDATION_FAILED");
+      expect(res.body.details).toBeDefined();
     });
   });
 });
@@ -227,34 +267,60 @@ describe("RolesGuard", () => {
     expect(guard.canActivate(context)).toBe(true);
   });
 
-  it("should deny access when user lacks required role", () => {
-    jest.spyOn(reflector, "getAllAndOverride").mockReturnValue(["admin"]);
-    const context = createMockExecutionContext({ user: { role: "user" } });
+  it("should throw AppException when user lacks required role", () => {
+    jest.spyOn(reflector, "getAllAndOverride").mockReturnValue([UserRole.ADMIN]);
+    const context = createMockExecutionContext({ user: { role: UserRole.USER } });
 
-    expect(guard.canActivate(context)).toBe(false);
+    expect(() => guard.canActivate(context)).toThrow(AppException);
   });
 });
 ```
 
-## Test Database
-
-- Use a separate test database — configure in `.env.test`:
-
-```
-DATABASE_URL="postgresql://user:pass@localhost:5432/myapp_test"
-```
-
-- Use test helpers for creating/cleaning data:
+## Test Helpers
 
 ```ts
-export async function createTestUser(dataSource: DataSource, overrides = {}): Promise<User> {
-  const repo = dataSource.getRepository(User);
+// test/helpers.ts
+export async function createTestUser(dataSource: DataSource, overrides = {}): Promise<UserEntity> {
+  const repo = dataSource.getRepository(UserEntity);
   return repo.save({
     name: "Test User",
     email: `test-${Date.now()}@test.com`,
+    passwordHash: await bcrypt.hash("Test1234!", 4), // low cost for speed
+    role: UserRole.USER,
+    status: UserStatus.ACTIVE,
     ...overrides,
   });
 }
+
+export async function loginAndGetCookies(app: INestApplication, user: UserEntity): Promise<string[]> {
+  const res = await request(app.getHttpServer())
+    .post("/auth/login-web")
+    .send({ email: user.email, password: "Test1234!" });
+  return res.headers["set-cookie"];
+}
+
+export function createMockExecutionContext(data: { user?: Partial<JwtPayload> }): ExecutionContext {
+  return {
+    switchToHttp: () => ({
+      getRequest: () => ({ user: data.user }),
+    }),
+    getHandler: () => jest.fn(),
+    getClass: () => jest.fn(),
+  } as unknown as ExecutionContext;
+}
+```
+
+## Test Database
+
+```yaml
+# config/yml/application.test.yml
+database:
+  postgres:
+    host: localhost
+    port: 5432
+    username: test_user
+    password: test_pass
+    name: myapp_test
 ```
 
 ## Coverage
@@ -264,9 +330,12 @@ export async function createTestUser(dataSource: DataSource, overrides = {}): Pr
 ## Rules
 
 - Use `Test.createTestingModule` — never instantiate services directly.
-- Mock repositories with `getRepositoryToken()` — never use real DB in unit tests.
-- E2E tests use a real test database — reset between test suites.
-- Test guards, pipes, and interceptors separately.
+- Mock custom repository classes directly (not `getRepositoryToken()`).
+- Verify `AppException` with both `code` and `status` — not NestJS built-in exceptions.
+- E2E tests use cookies for auth — not Bearer tokens.
+- E2E tests verify error response shape (`code`, `message`, `locale`, `details`).
+- Test guards, decorators, and mappers separately.
 - Test both success and error paths for every service method.
 - Each test must be independent — no shared mutable state.
+- Use test helpers for creating users, logging in, mock contexts.
 - Keep tests fast — mock everything except what you're testing.

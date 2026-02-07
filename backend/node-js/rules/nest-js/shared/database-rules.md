@@ -1,208 +1,219 @@
 # Database Rules (NestJS)
 
-> NestJS-specific database rules using TypeORM with the Repository pattern.
+> NestJS-specific database rules using TypeORM with custom repository pattern, BaseEntity, and mappers.
 
-## Entity Definition
+## BaseEntity
 
-- Use decorators to define entities with proper column types, relations, and indexes:
+- All entities extend the abstract `BaseEntity` — never define `id`, `createdAt`, `updatedAt`, `deletedAt` manually:
 
 ```ts
-@Entity("users")
-export class User {
-  @PrimaryGeneratedColumn("uuid")
-  id: string;
+// common/entities/base.entity.ts
+export abstract class BaseEntity {
+  @PrimaryGeneratedColumn()
+  id: number;
 
-  @Column({ type: "varchar", length: 100 })
-  name: string;
+  @CreateDateColumn({ name: "created_at", type: "timestamptz" })
+  readonly createdAt: Date;
 
-  @Column({ type: "varchar", unique: true })
-  email: string;
+  @UpdateDateColumn({ name: "updated_at", type: "timestamptz" })
+  readonly updatedAt: Date;
 
-  @Column({ type: "enum", enum: UserRole, default: UserRole.USER })
-  role: UserRole;
-
-  @Column({ type: "boolean", default: true })
-  isActive: boolean;
-
-  @DeleteDateColumn()
-  deletedAt: Date | null;
-
-  @CreateDateColumn()
-  createdAt: Date;
-
-  @UpdateDateColumn()
-  updatedAt: Date;
-
-  @OneToMany(() => Order, (order) => order.user)
-  orders: Order[];
-
-  @Index()
-  @Column({ type: "varchar", nullable: true })
-  phone: string;
+  @DeleteDateColumn({ name: "deleted_at", type: "timestamptz", nullable: true })
+  deletedAt: Date | null = null;
 }
 ```
 
-- Always use `@CreateDateColumn()`, `@UpdateDateColumn()` — do not manage timestamps manually.
-- Use `@DeleteDateColumn()` for soft deletes — TypeORM automatically filters soft-deleted records.
-- Add `@Index()` on columns used in WHERE, JOIN, and ORDER BY clauses.
+## Entity Definition
+
+- Use `@Column({ name: "snake_case" })` for all columns — DB uses `snake_case`, TypeScript uses `camelCase`:
+
+```ts
+@Entity("users")
+@Unique(["email"])
+export class UserEntity extends BaseEntity {
+  @Column({ name: "name", type: "varchar", length: 150 })
+  name: string;
+
+  @Column({ name: "email", type: "varchar", nullable: false })
+  email: string;
+
+  @Column({ name: "password_hash", type: "varchar", nullable: true })
+  passwordHash: string | null;
+
+  @Column({
+    name: "role",
+    type: "enum",
+    enum: UserRole,
+    enumName: "user_role_enum",
+    default: UserRole.USER,
+  })
+  role: UserRole;
+
+  @Column({
+    name: "status",
+    type: "enum",
+    enum: UserStatus,
+    enumName: "user_status_enum",
+    default: UserStatus.ACTIVE,
+  })
+  status: UserStatus;
+}
+```
+
+- Always provide `enumName` for enum columns — prevents duplicate type errors in migrations.
+- Use `@Unique()` at entity level — not `unique: true` on individual columns.
+- Entity class naming: `<Name>Entity` (e.g., `UserEntity`, `CompanyEntity`).
 
 ## TypeORM Module Registration
 
-- Register TypeORM in the root module with `forRoot`, entities in feature modules with `forFeature`:
-
 ```ts
 // app.module.ts
-@Module({
-  imports: [
-    TypeOrmModule.forRoot({
-      type: "postgres",
-      url: process.env.DATABASE_URL,
-      entities: [__dirname + "/**/*.entity{.ts,.js}"],
-      migrations: [__dirname + "/database/migrations/*{.ts,.js}"],
-      extra: { max: 20 },
-      synchronize: false, // NEVER true in production
-    }),
-    UsersModule,
-  ],
-})
-export class AppModule {}
-
-// users.module.ts
-@Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService],
-  controllers: [UsersController],
-})
-export class UsersModule {}
+TypeOrmModule.forRootAsync({
+  inject: [ConfigService],
+  useFactory: (configService: ConfigService) => ({
+    type: "postgres",
+    host: configService.get<string>("database.postgres.host"),
+    port: configService.get<number>("database.postgres.port"),
+    username: configService.get<string>("database.postgres.username"),
+    password: configService.get<string>("database.postgres.password"),
+    database: configService.get<string>("database.postgres.name"),
+    entities: [__dirname + "/**/*.entity{.ts,.js}"],
+    migrations: [__dirname + "/database/migrations/*{.ts,.js}"],
+    synchronize: false, // NEVER true in production
+  }),
+}),
 ```
 
 - **NEVER** set `synchronize: true` in production — always use migrations.
 
-## Repository Pattern
+## Custom Repository Pattern
 
-- Inject repositories via `@InjectRepository` — never use `dataSource.manager` directly:
+- **Never** use `@InjectRepository()`. Create custom repository classes:
 
 ```ts
-// ❌ Incorrect
+// ❌ Incorrect — @InjectRepository
 @Injectable()
-export class UsersService {
-  constructor(private readonly dataSource: DataSource) {}
-
-  async findById(id: string) {
-    return this.dataSource.manager.findOneBy(User, { id });
-  }
+export class UserService {
+  constructor(
+    @InjectRepository(UserEntity)
+    private readonly userRepository: Repository<UserEntity>,
+  ) {}
 }
 
-// ✅ Correct
+// ✅ Correct — custom repository
 @Injectable()
-export class UsersService {
-  constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
-  ) {}
+export class UserRepository extends Repository<UserEntity> {
+  constructor(private dataSource: DataSource) {
+    super(UserEntity, dataSource.createEntityManager());
+  }
 
-  async findById(id: string): Promise<User> {
-    const user = await this.userRepository.findOneBy({ id });
-    if (!user) throw new NotFoundException(`User ${id} not found`);
+  async findByUsername(email: string): Promise<UserEntity | null> {
+    return this.findOne({ where: { email } });
+  }
+
+  async findOfPagination(query: UserRequestQueryDto): Promise<[UserEntity[], number]> {
+    const { page = 1, size = 10, search, status, role } = query;
+
+    const qb = this.createQueryBuilder("user")
+      .orderBy("user.id", "ASC")
+      .skip((page - 1) * size)
+      .take(size);
+
+    if (status) {
+      qb.andWhere("user.status = :status", { status });
+    }
+
+    if (role) {
+      qb.andWhere("user.role = :role", { role });
+    }
+
+    if (search) {
+      qb.andWhere("(user.name ILIKE :search OR user.email ILIKE :search)", {
+        search: `%${search.trim()}%`,
+      });
+    }
+
+    return qb.getManyAndCount();
+  }
+}
+```
+
+- Register repositories as **providers** in the module (not via `TypeOrmModule.forFeature`):
+
+```ts
+@Module({
+  providers: [UserService, UserRepository],
+  controllers: [UserController],
+  exports: [UserService, UserRepository],
+})
+export class UserModule {}
+```
+
+## Mapper Pattern
+
+- Use static mapper classes for Entity ↔ DTO conversion:
+
+```ts
+export class UserMapper {
+  public static toDto(this: void, entity: UserEntity): UserResponseDto {
+    const dto = new UserResponseDto();
+    dto.id = entity.id;
+    dto.name = entity.name;
+    dto.email = entity.email;
+    dto.role = entity.role;
+    dto.status = entity.status;
+    return dto;
+  }
+
+  public static toCreateEntity(this: void, dto: UserCreateDto, role: UserRole): UserEntity {
+    const user = new UserEntity();
+    user.name = dto.name;
+    user.email = dto.email;
+    user.role = role;
+    user.passwordHash = dto.password;
+    user.status = UserStatus.ACTIVE;
+    return user;
+  }
+
+  public static toUpdateEntity(dto: UserUpdateDto, entity: UserEntity): UserEntity {
+    const user = new UserEntity();
+    user.name = dto.name ?? entity.name;
+    user.email = dto.email ?? entity.email;
     return user;
   }
 }
 ```
 
-## Custom Repositories
-
-- For complex queries, create custom repository classes:
-
-```ts
-@Injectable()
-export class UsersRepository extends Repository<User> {
-  constructor(private readonly dataSource: DataSource) {
-    super(User, dataSource.createEntityManager());
-  }
-
-  async findActiveByRole(role: UserRole): Promise<User[]> {
-    return this.find({
-      where: { role, isActive: true },
-      order: { createdAt: "DESC" },
-    });
-  }
-
-  async findWithOrders(id: string): Promise<User> {
-    return this.findOne({
-      where: { id },
-      relations: { orders: true },
-    });
-  }
-}
-
-// Register in module
-@Module({
-  imports: [TypeOrmModule.forFeature([User])],
-  providers: [UsersService, UsersRepository],
-})
-export class UsersModule {}
-```
-
-## Query Optimization
-
-- Select only required fields:
-
-```ts
-// ❌ Incorrect — fetches all columns
-const users = await this.userRepository.find();
-
-// ✅ Correct
-const users = await this.userRepository.find({
-  select: { id: true, name: true, email: true },
-});
-```
-
-- Use `relations` or QueryBuilder for eager loading — avoid N+1:
-
-```ts
-// ❌ Incorrect — N+1
-const users = await this.userRepository.find();
-for (const user of users) {
-  user.orders = await this.orderRepository.findBy({ userId: user.id });
-}
-
-// ✅ Correct — relations
-const users = await this.userRepository.find({
-  relations: { orders: true },
-});
-
-// ✅ Correct — QueryBuilder for complex joins
-const users = await this.userRepository
-  .createQueryBuilder("user")
-  .leftJoinAndSelect("user.orders", "order")
-  .where("user.isActive = :isActive", { isActive: true })
-  .orderBy("user.createdAt", "DESC")
-  .getMany();
-```
+- Use `this: void` on static methods to prevent accidental `this` usage.
+- Create a mapper per module in `mappers/<name>.mapper.ts`.
+- Never convert entities to DTOs inline in services/controllers.
 
 ## QueryBuilder Best Practices
 
-- Use QueryBuilder for dynamic filtering and pagination:
+- Use QueryBuilder for dynamic filtering, pagination, and complex joins:
 
 ```ts
-async findAll(query: UserQueryDto): Promise<[User[], number]> {
-  const qb = this.userRepository.createQueryBuilder("user");
+async findOfPagination(query: CompanyRequestDto): Promise<[CompanyEntity[], number]> {
+  const { page = 1, size = 10, search, status } = query;
 
-  if (query.search) {
-    qb.andWhere("(user.name ILIKE :search OR user.email ILIKE :search)", {
-      search: `%${query.search}%`,
+  const qb = this.createQueryBuilder("company")
+    .select(["company.id", "company.name", "company.description", "company.status", "company.createdAt"])
+    .leftJoin("company.logo", "logo")
+    .addSelect(["logo.publicUrl"])
+    .skip((page - 1) * size)
+    .take(size);
+
+  if (status) {
+    qb.andWhere("company.status = :status", { status });
+  }
+
+  if (search) {
+    qb.andWhere("(company.name ILIKE :search)", {
+      search: `%${search.trim()}%`,
     });
   }
 
-  if (query.role) {
-    qb.andWhere("user.role = :role", { role: query.role });
-  }
-
-  return qb
-    .orderBy(`user.${query.sortBy || "createdAt"}`, query.order || "DESC")
-    .skip((query.page - 1) * query.limit)
-    .take(query.limit)
-    .getManyAndCount();
+  return qb.getManyAndCount();
 }
 ```
 
@@ -216,9 +227,35 @@ qb.where(`user.email = '${email}'`);
 qb.where("user.email = :email", { email });
 ```
 
-## Migrations
+- Select only needed fields with `.select()` when returning partial data.
+- Use `.leftJoin()` + `.addSelect()` to load specific relation fields.
 
-- Generate and run migrations via TypeORM CLI:
+## Pagination
+
+- All list endpoints use the `Pagination.of()` helper:
+
+```ts
+async findAllUsers(query: UserRequestQueryDto): Promise<PaginationResponseDto<UserResponseDto>> {
+  const [entities, total] = await this.userRepository.findOfPagination(query);
+  return Pagination.of(query, total, entities.map(UserMapper.toDto));
+}
+```
+
+- Query DTOs extend `PaginationRequestDto`:
+
+```ts
+export class UserRequestQueryDto extends PaginationRequestDto {
+  @IsOptional()
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsEnum(UserStatus)
+  status?: UserStatus;
+}
+```
+
+## Migrations
 
 ```bash
 # Generate migration from entity changes
@@ -231,54 +268,15 @@ npx typeorm migration:run -d src/database/data-source.ts
 npx typeorm migration:revert -d src/database/data-source.ts
 ```
 
-- Always implement both `up()` and `down()`:
-
-```ts
-export class AddRoleColumnToUsers1700000000000 implements MigrationInterface {
-  async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.addColumn("users", new TableColumn({
-      name: "role",
-      type: "enum",
-      enum: ["user", "admin", "moderator"],
-      default: "'user'",
-    }));
-  }
-
-  async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.dropColumn("users", "role");
-  }
-}
-```
+- Always implement both `up()` and `down()`.
 
 ## Transactions
 
-- Use `QueryRunner` or `dataSource.transaction` for multi-table operations:
-
 ```ts
-// ✅ QueryRunner — manual control
-async createOrder(dto: CreateOrderDto): Promise<Order> {
-  const queryRunner = this.dataSource.createQueryRunner();
-  await queryRunner.connect();
-  await queryRunner.startTransaction();
-  try {
-    const order = await queryRunner.manager.save(Order, dto);
-    await queryRunner.manager.save(OrderItem, dto.items);
-    await queryRunner.manager.decrement(Inventory, { productId: dto.productId }, "quantity", 1);
-    await queryRunner.commitTransaction();
-    return order;
-  } catch (error) {
-    await queryRunner.rollbackTransaction();
-    throw error;
-  } finally {
-    await queryRunner.release();
-  }
-}
-
-// ✅ dataSource.transaction — simpler
 async createOrder(dto: CreateOrderDto): Promise<Order> {
   return this.dataSource.transaction(async (manager) => {
-    const order = await manager.save(Order, dto);
-    await manager.save(OrderItem, dto.items);
+    const order = await manager.save(OrderEntity, dto);
+    await manager.save(OrderItemEntity, dto.items);
     return order;
   });
 }
@@ -286,8 +284,9 @@ async createOrder(dto: CreateOrderDto): Promise<Order> {
 
 ## Soft Deletes
 
+- `BaseEntity` includes `@DeleteDateColumn()` — all deletes are soft by default:
+
 ```ts
-// Entity uses @DeleteDateColumn()
 await this.userRepository.softDelete(id);
 await this.userRepository.restore(id);
 
@@ -298,27 +297,15 @@ const users = await this.userRepository.find();
 const all = await this.userRepository.find({ withDeleted: true });
 ```
 
-## Graceful Shutdown
-
-```ts
-// main.ts
-app.enableShutdownHooks();
-
-// any.module.ts
-@Injectable()
-export class AppService implements OnModuleDestroy {
-  async onModuleDestroy() {
-    // cleanup connections
-  }
-}
-```
-
 ## Rules
 
+- All entities extend `BaseEntity` — never define id/timestamp columns manually.
+- Use custom repository classes — never `@InjectRepository()`.
+- Use mapper classes for entity ↔ DTO conversion — never convert inline.
+- Use `enumName` on all enum columns.
+- Use `@Column({ name: "snake_case" })` — DB snake_case, TS camelCase.
+- Use `@Unique()` at entity level for unique constraints.
 - Never set `synchronize: true` in production — use migrations only.
-- Always implement `up()` and `down()` in migrations.
-- Use the Repository pattern — inject via `@InjectRepository`.
-- Use UUIDs for public-facing IDs, auto-increment for internal.
-- Select only needed fields — avoid loading entire entities when unnecessary.
-- Use transactions for multi-table writes — partial updates cause data corruption.
-- Monitor slow queries — enable TypeORM query logging with duration threshold.
+- Always use parameterized QueryBuilder values — never interpolate.
+- Paginate all list endpoints via `Pagination.of()`.
+- Use transactions for multi-table writes.

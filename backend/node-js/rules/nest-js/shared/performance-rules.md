@@ -1,6 +1,6 @@
 # Performance Rules (NestJS)
 
-> NestJS-specific performance rules covering interceptors, caching, database, and async patterns.
+> NestJS-specific performance rules covering middleware, database optimization, pagination, and async patterns.
 
 ## Async Operations
 
@@ -8,94 +8,127 @@
 
 ```ts
 // ❌ Incorrect — sequential
-async getDashboard(userId: string) {
-  const user = await this.usersService.findById(userId);
-  const orders = await this.ordersService.findByUser(userId);
-  const notifications = await this.notificationsService.findByUser(userId);
+async getDashboard(userId: number) {
+  const user = await this.userService.findOne(userId);
+  const orders = await this.orderService.findByUser(userId);
+  const notifications = await this.notificationService.findByUser(userId);
   return { user, orders, notifications };
 }
 
 // ✅ Correct — parallel
-async getDashboard(userId: string) {
+async getDashboard(userId: number) {
   const [user, orders, notifications] = await Promise.all([
-    this.usersService.findById(userId),
-    this.ordersService.findByUser(userId),
-    this.notificationsService.findByUser(userId),
+    this.userService.findOne(userId),
+    this.orderService.findByUser(userId),
+    this.notificationService.findByUser(userId),
   ]);
   return { user, orders, notifications };
 }
 ```
 
-## Response Interceptor
+## Logger Middleware
 
-- Use interceptors for response transformation and timing:
+- Use a logging middleware that captures request/response timing:
 
 ```ts
 @Injectable()
-export class ResponseTimeInterceptor implements NestInterceptor {
-  private readonly logger = new Logger(ResponseTimeInterceptor.name);
+export class LoggerMiddleware implements NestMiddleware {
+  private readonly logger = new Logger(LoggerMiddleware.name);
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  use(req: Request, res: Response, next: NextFunction) {
+    const { method, originalUrl } = req;
     const start = Date.now();
-    return next.handle().pipe(
-      tap(() => {
-        const duration = Date.now() - start;
-        const request = context.switchToHttp().getRequest();
-        if (duration > 500) {
-          this.logger.warn("Slow request", {
-            method: request.method,
-            path: request.url,
-            duration,
-          });
-        }
-      }),
-    );
+    const ip = getClientIp(req);
+
+    res.on("finish", () => {
+      const { statusCode } = res;
+      const delay = Date.now() - start;
+      const message = `${method} - ${statusCode} ${originalUrl} - ${delay}ms, IP: ${ip}`;
+
+      if (statusCode >= 500) {
+        this.logger.error(message);
+      } else if (statusCode >= 400) {
+        this.logger.warn(message);
+      } else {
+        this.logger.log(message);
+      }
+    });
+
+    next();
+  }
+}
+```
+
+- Register in `AppModule`:
+
+```ts
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes("*");
   }
 }
 ```
 
 ## Database Performance
 
-- Select only required fields:
+- Select only required fields in QueryBuilder:
 
 ```ts
-// ❌ Incorrect
-const users = await this.userRepository.find();
+// ❌ Incorrect — selects all columns
+const companies = await this.companyRepository.find();
 
-// ✅ Correct
-const users = await this.userRepository.find({
-  select: { id: true, name: true, email: true },
-});
+// ✅ Correct — select specific fields
+const qb = this.createQueryBuilder("company")
+  .select(["company.id", "company.name", "company.status", "company.createdAt"])
+  .leftJoin("company.logo", "logo")
+  .addSelect(["logo.publicUrl"]);
 ```
 
-- Avoid N+1 — use `relations` or QueryBuilder:
+- Avoid N+1 — use `relations` or QueryBuilder joins:
 
 ```ts
-// ✅ Relations
-const users = await this.userRepository.find({
-  relations: { orders: true },
-  where: { isActive: true },
-});
+// ❌ Incorrect — N+1
+const users = await this.userRepository.find();
+for (const user of users) {
+  user.orders = await this.orderRepository.findBy({ userId: user.id });
+}
 
-// ✅ QueryBuilder for complex joins
+// ✅ Correct — join in QueryBuilder
 const users = await this.userRepository
   .createQueryBuilder("user")
-  .leftJoinAndSelect("user.orders", "order", "order.status = :status", { status: "active" })
-  .where("user.isActive = :isActive", { isActive: true })
+  .leftJoinAndSelect("user.orders", "order")
+  .where("user.status = :status", { status: UserStatus.ACTIVE })
   .getMany();
 ```
 
-- Paginate all list endpoints:
+## Pagination
+
+- **All** list endpoints must be paginated via `Pagination.of()`:
 
 ```ts
-async findAll(query: PaginationDto): Promise<[User[], number]> {
-  return this.userRepository.findAndCount({
-    skip: (query.page - 1) * query.limit,
-    take: query.limit,
-    order: { createdAt: "DESC" },
-  });
+async findOfPagination(query: UserRequestQueryDto): Promise<[UserEntity[], number]> {
+  const { page = 1, size = 10, search, status } = query;
+
+  const qb = this.createQueryBuilder("user")
+    .orderBy("user.id", "ASC")
+    .skip((page - 1) * size)
+    .take(size);
+
+  if (status) {
+    qb.andWhere("user.status = :status", { status });
+  }
+
+  if (search) {
+    qb.andWhere("(user.name ILIKE :search OR user.email ILIKE :search)", {
+      search: `%${search.trim()}%`,
+    });
+  }
+
+  return qb.getManyAndCount();
 }
 ```
+
+- Use `.skip()` and `.take()` — never load unbounded result sets.
 
 ## Query Logging
 
@@ -103,14 +136,12 @@ async findAll(query: PaginationDto): Promise<[User[], number]> {
 
 ```ts
 TypeOrmModule.forRoot({
-  logging: ["error", "warn", "query"],
+  logging: ["error", "warn"],
   maxQueryExecutionTime: 500, // log queries slower than 500ms
 });
 ```
 
 ## Compression
-
-- Enable response compression:
 
 ```ts
 // main.ts
@@ -119,8 +150,6 @@ app.use(compression());
 ```
 
 ## Payload Size
-
-- Limit request body size:
 
 ```ts
 app.use(json({ limit: "1mb" }));
@@ -132,17 +161,14 @@ app.use(urlencoded({ extended: true, limit: "1mb" }));
 - Use `@nestjs/bull` or `@nestjs/bullmq` for heavy tasks:
 
 ```ts
-// queue processor
 @Processor("reports")
 export class ReportsProcessor {
   @Process("generate")
   async handleGenerate(job: Job<GenerateReportDto>) {
-    const report = await this.reportsService.generate(job.data);
-    return report;
+    return this.reportsService.generate(job.data);
   }
 }
 
-// service — add job to queue
 @Injectable()
 export class ReportsService {
   constructor(@InjectQueue("reports") private readonly reportsQueue: Queue) {}
@@ -152,19 +178,11 @@ export class ReportsService {
     return { jobId: job.id as string };
   }
 }
-
-// controller
-@Post("reports")
-async generateReport(@Body() dto: GenerateReportDto) {
-  return this.reportsService.requestReport(dto);
-}
 ```
 
 - Use queues for: email sending, report generation, image processing, data imports, webhooks.
 
 ## Streaming Large Data
-
-- Use streams for large file processing or data export:
 
 ```ts
 @Get("export")
@@ -182,7 +200,7 @@ async exportUsers(@Res() res: Response) {
 
 ## Timeouts
 
-- Set timeouts on external HTTP calls:
+- Set timeouts on all external HTTP calls:
 
 ```ts
 @Injectable()
@@ -198,14 +216,27 @@ export class PaymentService {
 }
 ```
 
+## Mapper Performance
+
+- Use `UserMapper.toDto` as a reference to `Array.map()` for bulk conversions:
+
+```ts
+// ✅ Efficient — pass static method reference
+return Pagination.of(query, total, entities.map(UserMapper.toDto));
+
+// ❌ Inefficient — creates closure per call
+return Pagination.of(query, total, entities.map(e => UserMapper.toDto(e)));
+```
+
 ## Rules
 
 - Never block the event loop — use async I/O everywhere.
 - Use `Promise.all` for independent parallel operations.
 - Paginate all list endpoints — never return unbounded collections.
 - Select only needed fields — avoid `SELECT *`.
+- Use Logger middleware to track request timing and slow requests.
 - Use queues for operations taking more than 5 seconds.
 - Log slow queries — set `maxQueryExecutionTime` in TypeORM config.
 - Enable compression in production.
 - Set timeouts on all external HTTP calls.
-- Monitor response times and memory usage — alert on anomalies.
+- Limit request body size to prevent abuse.

@@ -47,7 +47,7 @@ This repository provides **ready-to-use rule sets** for different tech stacks so
 
 | Rule Set | Tech Stack | File | Status |
 |----------|-----------|------|--------|
-| NestJS | NestJS, TypeScript, TypeORM | [`backend/node-js/rules/nest-js/CLAUDE.md`](backend/node-js/rules/nest-js/CLAUDE.md) | 🚧 Coming soon |
+| NestJS | NestJS, TypeScript, TypeORM | [`backend/node-js/rules/nest-js/CLAUDE.md`](backend/node-js/rules/nest-js/CLAUDE.md) | ✅ Ready |
 | Express | Express, TypeScript, TypeORM | [`backend/node-js/rules/express-js/CLAUDE.md`](backend/node-js/rules/express-js/CLAUDE.md) | 🚧 Coming soon |
 | Java + Spring Boot | Java, Spring Boot | [`backend/java/rules/CLAUDE.md`](backend/java/rules/CLAUDE.md) | 🚧 Coming soon |
 | Python + FastAPI | Python, FastAPI | [`backend/python/rules/CLAUDE.md`](backend/python/rules/CLAUDE.md) | 🚧 Coming soon |
@@ -84,14 +84,19 @@ The `frontend/shared/` directory contains **reusable frontend building blocks** 
 
 | File | Description |
 |------|-------------|
-| [`frontend/shared/accessibility-rules.md`](frontend/shared/accessibility-rules.md) | Semantic HTML, ARIA, keyboard navigation, color contrast |
-| [`frontend/shared/api-rules.md`](frontend/shared/api-rules.md) | API service layer, HTTP client, error handling, request/response typing |
-| [`frontend/shared/code-review-rules.md`](frontend/shared/code-review-rules.md) | Reviewer/author responsibilities, comment types, review checklist |
-| [`frontend/shared/documentation-rules.md`](frontend/shared/documentation-rules.md) | JSDoc, block comments, inline comments, file-level docs |
 | [`frontend/shared/naming-rules.md`](frontend/shared/naming-rules.md) | Casing conventions, boolean/function/component/event naming |
+| [`frontend/shared/typescript-rules.md`](frontend/shared/typescript-rules.md) | Type file organization, declaration order, enums, avoid `any` |
+| [`frontend/shared/component-rules.md`](frontend/shared/component-rules.md) | Single responsibility, page thin wrappers, UI library usage, naming |
+| [`frontend/shared/api-rules.md`](frontend/shared/api-rules.md) | API service layer, HTTP client, error handling, request/response typing |
+| [`frontend/shared/testing-rules.md`](frontend/shared/testing-rules.md) | Test types (unit/integration), naming conventions, 80% coverage minimum |
+| [`frontend/shared/documentation-rules.md`](frontend/shared/documentation-rules.md) | JSDoc, block comments, inline comments, file-level docs |
+| [`frontend/shared/code-review-rules.md`](frontend/shared/code-review-rules.md) | Reviewer/author responsibilities, comment types, review checklist |
 | [`frontend/shared/performance-rules.md`](frontend/shared/performance-rules.md) | Rendering, lazy loading, image optimization, bundle size, memory |
 | [`frontend/shared/security-rules.md`](frontend/shared/security-rules.md) | Secrets, input validation, auth, XSS prevention, dependency security |
-| [`frontend/shared/testing-rules.md`](frontend/shared/testing-rules.md) | Test types (unit/integration), naming conventions, 80% coverage minimum |
+| [`frontend/shared/accessibility-rules.md`](frontend/shared/accessibility-rules.md) | Semantic HTML, ARIA, keyboard navigation, color contrast |
+| [`frontend/shared/css-rules.md`](frontend/shared/css-rules.md) | Tailwind preference, design tokens, scoped styles, nesting limits |
+| [`frontend/shared/asset-rules.md`](frontend/shared/asset-rules.md) | Image optimization, SVG icon components, `currentColor`/`1em` standards |
+| [`frontend/shared/code-organization-rules.md`](frontend/shared/code-organization-rules.md) | Index files, Prettier/ESLint setup, import order, arrow functions |
 
 ---
 
@@ -116,12 +121,12 @@ The `backend/node-js/rules/nest-js/shared/` directory contains rules specific to
 
 | File | Description |
 |------|-------------|
-| [`backend/node-js/rules/nest-js/shared/database-rules.md`](backend/node-js/rules/nest-js/shared/database-rules.md) | TypeORM + NestJS: entities, repository injection, QueryBuilder, migrations |
-| [`backend/node-js/rules/nest-js/shared/error-handling-rules.md`](backend/node-js/rules/nest-js/shared/error-handling-rules.md) | Exception filters, ValidationPipe, built-in HTTP exceptions |
-| [`backend/node-js/rules/nest-js/shared/security-rules.md`](backend/node-js/rules/nest-js/shared/security-rules.md) | JWT guards, RolesGuard, @Throttle, Passport integration |
-| [`backend/node-js/rules/nest-js/shared/testing-rules.md`](backend/node-js/rules/nest-js/shared/testing-rules.md) | Test.createTestingModule, repository mocking, e2e with supertest |
-| [`backend/node-js/rules/nest-js/shared/performance-rules.md`](backend/node-js/rules/nest-js/shared/performance-rules.md) | Interceptors, @nestjs/bull queues, streaming, query logging |
-| [`backend/node-js/rules/nest-js/shared/caching-rules.md`](backend/node-js/rules/nest-js/shared/caching-rules.md) | @nestjs/cache-manager, CacheInterceptor, Redis, cache invalidation |
+| [`backend/node-js/rules/nest-js/shared/database-rules.md`](backend/node-js/rules/nest-js/shared/database-rules.md) | BaseEntity, custom Repository pattern, static Mapper classes, Pagination.of() |
+| [`backend/node-js/rules/nest-js/shared/error-handling-rules.md`](backend/node-js/rules/nest-js/shared/error-handling-rules.md) | AppException, error code enums, i18n error messages, HttpExceptionFilter |
+| [`backend/node-js/rules/nest-js/shared/security-rules.md`](backend/node-js/rules/nest-js/shared/security-rules.md) | JWT cookie auth, JwtWebGuard, RolesGuard, CompanyKeyGuard, custom decorators |
+| [`backend/node-js/rules/nest-js/shared/testing-rules.md`](backend/node-js/rules/nest-js/shared/testing-rules.md) | Custom repository mocking, AppException testing, cookie-based e2e tests |
+| [`backend/node-js/rules/nest-js/shared/performance-rules.md`](backend/node-js/rules/nest-js/shared/performance-rules.md) | LoggerMiddleware, QueryBuilder field selection, pagination, mapper performance |
+| [`backend/node-js/rules/nest-js/shared/caching-rules.md`](backend/node-js/rules/nest-js/shared/caching-rules.md) | Custom RedisService with ioredis, OTP storage, rate limiting, cache patterns |
 
 ### Express-Specific
 
@@ -260,15 +265,20 @@ claude-code-rules/
 │   ├── git-rules.md
 │   └── planning-rules.md
 ├── frontend/
-│   ├── shared/                      ← Frontend-specific shared rules
-│   │   ├── accessibility-rules.md
-│   │   ├── api-rules.md
-│   │   ├── code-review-rules.md
-│   │   ├── documentation-rules.md
+│   ├── shared/                      ← Frontend-specific shared rules (13 files)
 │   │   ├── naming-rules.md
+│   │   ├── typescript-rules.md
+│   │   ├── component-rules.md
+│   │   ├── api-rules.md
+│   │   ├── testing-rules.md
+│   │   ├── documentation-rules.md
+│   │   ├── code-review-rules.md
 │   │   ├── performance-rules.md
 │   │   ├── security-rules.md
-│   │   └── testing-rules.md
+│   │   ├── accessibility-rules.md
+│   │   ├── css-rules.md
+│   │   ├── asset-rules.md
+│   │   └── code-organization-rules.md
 │   └── rules/
 │       └── vue-ts/
 │           └── CLAUDE.md            ← Vue 3 + TypeScript rules (✅ Ready)
@@ -278,7 +288,7 @@ claude-code-rules/
 │   │   └── rules/
 │   │       ├── nest-js/
 │   │       │   ├── shared/          ← NestJS-specific rules (6 files)
-│   │       │   └── CLAUDE.md        ← NestJS rules (🚧 Coming soon)
+│   │       │   └── CLAUDE.md        ← NestJS rules (✅ Ready)
 │   │       └── express-js/
 │   │           ├── shared/          ← Express-specific rules (6 files)
 │   │           └── CLAUDE.md        ← Express rules (🚧 Coming soon)
