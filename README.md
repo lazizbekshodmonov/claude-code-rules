@@ -6,7 +6,7 @@ A collection of battle-tested `CLAUDE.md` rule sets for different project types.
 
 - [What is this?](#what-is-this)
 - [Available Rule Sets](#available-rule-sets)
-- [Shared Rules (Universal)](#shared-rules-universal)
+- [Frontend Shared Rules](#frontend-shared-rules)
 - [Quick Start](#quick-start)
 - [Installation](#installation)
 - [How It Works](#how-it-works)
@@ -59,25 +59,25 @@ This repository provides **ready-to-use rule sets** for different tech stacks so
 
 ---
 
-## Shared Rules (Universal)
+## Frontend Shared Rules
 
-The `shared/` directory contains **universal building blocks** — rules that apply to any tech stack. These cover topics like git conventions, security, testing, naming, and more.
+The `frontend/shared/` directory contains **reusable frontend building blocks** — rules that are embedded into frontend `CLAUDE.md` files. These cover naming, testing, security, performance, and other frontend-specific conventions.
 
-> **Important:** Claude Code only reads `CLAUDE.md` files, not the `shared/` directory directly. To use shared rules, copy and paste the relevant sections into your project's `CLAUDE.md`.
+> **Important:** Claude Code only reads `CLAUDE.md` files, not the `shared/` directory directly. These rules are already included in the frontend rule sets (e.g., `vue-ts/CLAUDE.md`).
 
 | File | Description |
 |------|-------------|
-| [`shared/accessibility-rules.md`](shared/accessibility-rules.md) | Semantic HTML, ARIA, keyboard navigation, color contrast |
-| [`shared/agent-rules.md`](shared/agent-rules.md) | Multi-agent execution, context limits, scoping strategies |
-| [`shared/api-rules.md`](shared/api-rules.md) | API service layer, HTTP client, error handling, request/response typing |
-| [`shared/code-review-rules.md`](shared/code-review-rules.md) | Reviewer/author responsibilities, comment types, review checklist |
-| [`shared/documentation-rules.md`](shared/documentation-rules.md) | JSDoc, block comments, inline comments, file-level docs |
-| [`shared/git-rules.md`](shared/git-rules.md) | Branch naming, commit messages (conventional commits), PR practices |
-| [`shared/naming-rules.md`](shared/naming-rules.md) | Casing conventions, boolean/function/component/event naming |
-| [`shared/performance-rules.md`](shared/performance-rules.md) | Rendering, lazy loading, image optimization, bundle size, memory |
-| [`shared/planning-rules.md`](shared/planning-rules.md) | Mandatory planning mode, plan file template, complexity levels |
-| [`shared/security-rules.md`](shared/security-rules.md) | Secrets, input validation, auth, XSS prevention, dependency security |
-| [`shared/testing-rules.md`](shared/testing-rules.md) | Test types (unit/integration), naming conventions, 80% coverage minimum |
+| [`frontend/shared/accessibility-rules.md`](frontend/shared/accessibility-rules.md) | Semantic HTML, ARIA, keyboard navigation, color contrast |
+| [`frontend/shared/agent-rules.md`](frontend/shared/agent-rules.md) | Multi-agent execution, context limits, scoping strategies |
+| [`frontend/shared/api-rules.md`](frontend/shared/api-rules.md) | API service layer, HTTP client, error handling, request/response typing |
+| [`frontend/shared/code-review-rules.md`](frontend/shared/code-review-rules.md) | Reviewer/author responsibilities, comment types, review checklist |
+| [`frontend/shared/documentation-rules.md`](frontend/shared/documentation-rules.md) | JSDoc, block comments, inline comments, file-level docs |
+| [`frontend/shared/git-rules.md`](frontend/shared/git-rules.md) | Branch naming, commit messages (conventional commits), PR practices |
+| [`frontend/shared/naming-rules.md`](frontend/shared/naming-rules.md) | Casing conventions, boolean/function/component/event naming |
+| [`frontend/shared/performance-rules.md`](frontend/shared/performance-rules.md) | Rendering, lazy loading, image optimization, bundle size, memory |
+| [`frontend/shared/planning-rules.md`](frontend/shared/planning-rules.md) | Mandatory planning mode, plan file template, complexity levels |
+| [`frontend/shared/security-rules.md`](frontend/shared/security-rules.md) | Secrets, input validation, auth, XSS prevention, dependency security |
+| [`frontend/shared/testing-rules.md`](frontend/shared/testing-rules.md) | Test types (unit/integration), naming conventions, 80% coverage minimum |
 
 ---
 
@@ -198,19 +198,19 @@ Team gets consistent, high-quality code
 ```
 claude-code-rules/
 ├── README.md
-├── shared/                          ← Universal rules (embed into CLAUDE.md)
-│   ├── accessibility-rules.md
-│   ├── agent-rules.md
-│   ├── api-rules.md
-│   ├── code-review-rules.md
-│   ├── documentation-rules.md
-│   ├── git-rules.md
-│   ├── naming-rules.md
-│   ├── performance-rules.md
-│   ├── planning-rules.md
-│   ├── security-rules.md
-│   └── testing-rules.md
 ├── frontend/
+│   ├── shared/                      ← Reusable frontend rules (embedded into CLAUDE.md)
+│   │   ├── accessibility-rules.md
+│   │   ├── agent-rules.md
+│   │   ├── api-rules.md
+│   │   ├── code-review-rules.md
+│   │   ├── documentation-rules.md
+│   │   ├── git-rules.md
+│   │   ├── naming-rules.md
+│   │   ├── performance-rules.md
+│   │   ├── planning-rules.md
+│   │   ├── security-rules.md
+│   │   └── testing-rules.md
 │   └── rules/
 │       └── vue-ts/
 │           └── CLAUDE.md            ← Vue 3 + TypeScript rules (✅ Ready)
