@@ -43,12 +43,12 @@ This repository provides **ready-to-use rule sets** for different tech stacks so
 
 | Rule Set | Tech Stack | File |
 |----------|-----------|------|
-| Vue + TypeScript | Vue 3, TypeScript, Tailwind CSS | [`rules/vue-ts/CLAUDE.md`](rules/vue-ts/CLAUDE.md) |
-| React + TypeScript | React, TypeScript, Tailwind CSS | [`rules/react-ts/CLAUDE.md`](rules/react-ts/CLAUDE.md) |
-| Nuxt 3 | Nuxt 3, Vue 3, TypeScript | [`rules/nuxt3/CLAUDE.md`](rules/nuxt3/CLAUDE.md) |
-| Next.js | Next.js, React, TypeScript | [`rules/nextjs/CLAUDE.md`](rules/nextjs/CLAUDE.md) |
-| Node.js API | Express/Fastify, TypeScript, Prisma | [`rules/node-api/CLAUDE.md`](rules/node-api/CLAUDE.md) |
-| Flutter | Dart, Flutter, BLoC | [`rules/flutter/CLAUDE.md`](rules/flutter/CLAUDE.md) |
+| Vue + TypeScript | Vue 3, TypeScript, Tailwind CSS | [`rules/vue-ts/CLAUDE.md`](frontend/rules/vue-ts/CLAUDE.md) |
+| React + TypeScript | React, TypeScript, Tailwind CSS | [`rules/react-ts/CLAUDE.md`](frontend/rules/react-ts/CLAUDE.md) |
+| Nuxt 3 | Nuxt 3, Vue 3, TypeScript | [`rules/nuxt3/CLAUDE.md`](frontend/rules/nuxt3/CLAUDE.md) |
+| Next.js | Next.js, React, TypeScript | [`rules/nextjs/CLAUDE.md`](frontend/rules/nextjs/CLAUDE.md) |
+| Node.js API | Express/Fastify, TypeScript, Prisma | [`rules/node-api/CLAUDE.md`](frontend/rules/node-api/CLAUDE.md) |
+| Flutter | Dart, Flutter, BLoC | [`rules/flutter/CLAUDE.md`](frontend/rules/flutter/CLAUDE.md) |
 
 > 💡 Don't see your stack? [Contribute](#contributing) a new rule set or open an issue!
 
