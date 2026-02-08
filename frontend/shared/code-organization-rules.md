@@ -61,6 +61,55 @@ The project must have a consistent Prettier configuration. Key rules:
 - Always use **parentheses** around arrow function parameters: `(x) => x`
 - Line endings: **LF** (`\n`) — not CRLF
 
+## Post-Task Verification
+
+> **CRITICAL:** After completing any task (feature, bugfix, refactor), you MUST run type check and ESLint before considering the work done.
+
+### Required Verification Steps
+
+Run these commands **in order** after every task:
+
+```bash
+# 1. Type check — catch type errors across the entire project
+npm run type-check
+
+# 2. ESLint — catch code quality and style issues
+npm run lint
+```
+
+- If `type-check` script is missing in `package.json`, add it:
+
+```json
+{
+  "scripts": {
+    "type-check": "vue-tsc --noEmit",
+    "type-check": "tsc --noEmit"
+  }
+}
+```
+
+> Use `vue-tsc --noEmit` for Vue projects, `tsc --noEmit` for React/Angular/other TS projects.
+
+- If any errors are found, **fix them before marking the task as complete**.
+- Do NOT ignore or suppress errors with `@ts-ignore`, `eslint-disable`, or `any` — fix the root cause.
+- If a type error or lint error is unrelated to your changes, fix it anyway or document it as a separate task.
+
+### Verification Checklist
+
+| Step | Command | Must Pass |
+|------|---------|-----------|
+| Type Check | `npm run type-check` | ✅ Zero errors |
+| ESLint | `npm run lint` | ✅ Zero errors, zero warnings |
+
+```bash
+# ❌ Incorrect — skipping verification
+# "I'm done, let me commit"
+git add . && git commit -m "feat: add user profile"
+
+# ✅ Correct — verify before commit
+npm run type-check && npm run lint && git add . && git commit -m "feat: add user profile"
+```
+
 ## Code Formatting Compliance
 
 - Code must fully comply with the project's Prettier and linter configuration.
@@ -111,6 +160,8 @@ Any deviation from project rules is allowed **only** when:
 
 - `index.ts` files contain only re-exports — no logic.
 - Prettier and ESLint must be configured before writing any code.
+- After every task, run `npm run type-check` and `npm run lint` — both must pass with zero errors.
+- Never suppress type or lint errors — fix the root cause.
 - Follow consistent import ordering.
 - One class per file.
 - Prefer arrow functions over function declarations.
